@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1a237e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ECO">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icone.svg">
+<title>ECO · Decisão de Compra</title>
+<style>
+  :root{
+    --azul:#1a237e; --azul-med:#3949ab; --azul-claro:#e8eaf6;
+    --laranja:#e65100;
+    --verde:#2e7d32; --verde-bg:#c8e6c9;
+    --amarelo:#f9a825; --amarelo-bg:#fff8e1;
+    --vermelho:#c62828; --vermelho-bg:#ffcdd2;
+    --bg:#f0f2f5; --card:#ffffff;
+    --texto:#1c1c1c; --texto-suave:#666;
+    --sombra:0 8px 28px rgba(0,0,0,.10);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg);
+    font-family:-apple-system,'Segoe UI',system-ui,Roboto,sans-serif;
+    color:var(--texto); overflow-x:hidden;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .app{
+    max-width:480px; margin:0 auto; min-height:100vh;
+    display:flex; flex-direction:column;
+    padding:20px 18px calc(20px + env(safe-area-inset-bottom));
+  }
+  .tela{display:none;flex:1;flex-direction:column;animation:fade .25s ease;}
+  .tela.ativa{display:flex;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+  .home-topo{text-align:center;padding:14px 0 26px;}
+  .home-topo .logo{font-size:44px;line-height:1;}
+  .home-topo h1{font-size:34px;font-weight:900;color:var(--azul);margin-top:8px;letter-spacing:2px;}
+  .home-topo .tagline{font-size:12px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:var(--azul-med);margin-top:4px;}
+
+  .resumo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+  .resumo-card{background:var(--card);border-radius:14px;padding:14px;box-shadow:var(--sombra);}
+  .resumo-card .rotulo{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--texto-suave);}
+  .resumo-card .valor{font-size:24px;font-weight:800;color:var(--azul);margin-top:4px;font-variant-numeric:tabular-nums;}
+  .resumo-card .valor.verde{color:var(--verde);}
+
+  .btn-principal{
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    width:100%;padding:18px;border:none;border-radius:16px;
+    background:linear-gradient(135deg,var(--azul),var(--azul-med));
+    color:#fff;font-size:16px;font-weight:700;letter-spacing:.3px;
+    cursor:pointer;box-shadow:0 10px 24px rgba(26,35,126,.3);
+    transition:transform .15s;
+  }
+  .btn-principal:active{transform:scale(.98);}
+  .btn-secundario{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    width:100%;padding:14px;border:1.5px solid #d5d8e0;border-radius:14px;
+    background:#fff;color:var(--texto);font-size:14px;font-weight:600;
+    cursor:pointer;margin-top:10px;
+  }
+  .btn-instalar{
+    display:none;align-items:center;justify-content:center;gap:8px;
+    width:100%;padding:14px;border:1.5px solid var(--azul);border-radius:14px;
+    background:var(--azul-claro);color:var(--azul);font-size:14px;font-weight:700;
+    cursor:pointer;margin-top:10px;
+  }
+  .btn-instalar.visivel{display:flex;}
+
+  .historico-titulo{
+    font-size:12px;font-weight:800;letter-spacing:1.5px;
+    text-transform:uppercase;color:var(--texto-suave);
+    margin:24px 0 10px;display:flex;justify-content:space-between;align-items:center;
+  }
+  .historico-titulo button{background:none;border:none;font-size:11px;color:var(--vermelho);font-weight:700;cursor:pointer;letter-spacing:.5px;}
+  .historico{display:flex;flex-direction:column;gap:8px;}
+  .historico-vazio{background:#fff;border-radius:12px;padding:24px;text-align:center;color:var(--texto-suave);font-size:13px;box-shadow:var(--sombra);}
+  .item{background:#fff;border-radius:12px;padding:12px 14px;box-shadow:var(--sombra);display:flex;align-items:center;gap:12px;border-left:5px solid var(--azul);}
+  .item.ok{border-left-color:var(--verde);}
+  .item.pense{border-left-color:var(--amarelo);}
+  .item.nao{border-left-color:var(--vermelho);}
+  .item .icone{font-size:22px;flex-shrink:0;}
+  .item .info{flex:1;min-width:0;}
+  .item .nome{font-size:13.5px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .item .meta{font-size:11px;color:var(--texto-suave);margin-top:2px;}
+  .item .nota{font-size:15px;font-weight:800;color:var(--azul);font-variant-numeric:tabular-nums;flex-shrink:0;}
+  .item .nota.ok{color:var(--verde);}
+  .item .nota.pense{color:var(--amarelo);}
+  .item .nota.nao{color:var(--vermelho);}
+
+  .fluxo-topo{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+  .btn-voltar{
+    width:38px;height:38px;border-radius:50%;border:none;
+    background:#fff;box-shadow:var(--sombra);cursor:pointer;
+    font-size:18px;color:var(--azul);display:flex;align-items:center;justify-content:center;
+  }
+  .progresso{flex:1;height:6px;background:#e0e3ea;border-radius:3px;overflow:hidden;}
+  .progresso .fill{height:100%;width:0%;background:linear-gradient(90deg,var(--azul),var(--azul-med));border-radius:3px;transition:width .35s cubic-bezier(.4,0,.2,1);}
+  .contador{font-size:12px;font-weight:700;color:var(--texto-suave);min-width:32px;text-align:right;font-variant-numeric:tabular-nums;}
+
+  .pergunta-area{flex:1;display:flex;flex-direction:column;justify-content:center;padding:24px 4px;text-align:center;}
+  .pergunta-num{
+    display:inline-block;font-size:12px;font-weight:800;letter-spacing:2px;
+    text-transform:uppercase;color:var(--azul);background:var(--azul-claro);
+    padding:5px 12px;border-radius:20px;margin:0 auto 18px;
+  }
+  .pergunta-titulo{font-size:24px;font-weight:800;line-height:1.25;color:var(--texto);margin-bottom:10px;letter-spacing:-.3px;}
+  .pergunta-titulo em{font-style:normal;color:var(--azul);}
+  .pergunta-dica{font-size:13.5px;color:var(--texto-suave);line-height:1.5;max-width:320px;margin:0 auto 28px;}
+
+  .slider-wrap{padding:0 6px;display:flex;flex-direction:column;align-items:center;gap:18px;}
+  .nota-grande{font-size:64px;font-weight:900;line-height:1;color:var(--azul);font-variant-numeric:tabular-nums;transition:color .2s;}
+  .nota-grande small{font-size:20px;color:var(--texto-suave);font-weight:600;}
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:4px;
+    background:linear-gradient(90deg,var(--vermelho) 0%,var(--amarelo) 50%,var(--verde) 100%);
+    outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:30px;height:30px;border-radius:50%;
+    background:#fff;border:3px solid var(--azul);cursor:pointer;
+    box-shadow:0 4px 12px rgba(0,0,0,.2);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:30px;height:30px;border-radius:50%;background:#fff;
+    border:3px solid var(--azul);cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.2);
+  }
+  .escala{display:flex;justify-content:space-between;width:100%;font-size:10px;font-weight:700;color:var(--texto-suave);letter-spacing:1px;text-transform:uppercase;}
+  .btn-continuar{
+    margin-top:22px;padding:16px;border:none;border-radius:14px;
+    background:var(--azul);color:#fff;font-size:15px;font-weight:700;
+    cursor:pointer;box-shadow:0 8px 20px rgba(26,35,126,.25);transition:transform .15s;
+  }
+  .btn-continuar:active{transform:scale(.98);}
+
+  .resultado-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px 4px;}
+  .resultado-icone{font-size:80px;line-height:1;margin-bottom:8px;animation:pop .5s cubic-bezier(.34,1.56,.64,1);}
+  @keyframes pop{0%{transform:scale(0);}100%{transform:scale(1);}}
+  .resultado-veredito{font-size:30px;font-weight:900;letter-spacing:-.5px;margin-bottom:6px;}
+  .resultado-nota{font-size:16px;color:var(--texto-suave);margin-bottom:6px;}
+  .resultado-nota strong{color:var(--texto);font-size:22px;font-weight:800;}
+  .resultado-msg{font-size:14.5px;line-height:1.55;color:var(--texto-suave);max-width:320px;margin:12px auto 0;}
+  .resultado-msg strong{color:var(--texto);}
+  .resultado-area.ok .resultado-veredito{color:var(--verde);}
+  .resultado-area.pense .resultado-veredito{color:#b28704;}
+  .resultado-area.nao .resultado-veredito{color:var(--vermelho);}
+
+  .resultado-detalhes{background:#fff;border-radius:14px;padding:14px;margin-top:24px;width:100%;box-shadow:var(--sombra);text-align:left;}
+  .resultado-detalhes h3{font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--texto-suave);margin-bottom:10px;}
+  .detalhe-linha{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;color:var(--texto-suave);border-bottom:1px solid #f0f2f5;}
+  .detalhe-linha:last-child{border-bottom:none;}
+  .detalhe-linha span:last-child{font-weight:800;color:var(--texto);}
+  .resultado-acoes{width:100%;margin-top:20px;display:flex;flex-direction:column;gap:8px;}
+
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:50;animation:fade .2s ease;}
+  .modal.ativo{display:flex;}
+  .modal-box{background:#fff;border-radius:22px 22px 0 0;padding:24px 20px calc(24px + env(safe-area-inset-bottom));width:100%;max-width:480px;animation:slideUp .3s cubic-bezier(.4,0,.2,1);}
+  @keyframes slideUp{from{transform:translateY(100%);}to{transform:none;}}
+  .modal-box h2{font-size:18px;font-weight:800;color:var(--azul);margin-bottom:4px;}
+  .modal-box p{font-size:13px;color:var(--texto-suave);margin-bottom:16px;line-height:1.5;}
+  .modal-box input[type=text]{width:100%;padding:15px;border:1.5px solid #d5d8e0;border-radius:12px;font-size:16px;font-family:inherit;margin-bottom:14px;outline:none;transition:border-color .2s;}
+  .modal-box input[type=text]:focus{border-color:var(--azul);}
+  .modal-box .valor-input{display:flex;align-items:center;gap:6px;border:1.5px solid #d5d8e0;border-radius:12px;padding:0 14px;margin-bottom:14px;transition:border-color .2s;}
+  .modal-box .valor-input:focus-within{border-color:var(--azul);}
+  .modal-box .valor-input span{font-size:15px;font-weight:700;color:var(--texto-suave);}
+  .modal-box .valor-input input{border:none;padding:15px 0;margin:0;flex:1;font-size:16px;font-family:inherit;outline:none;width:100%;}
+  .modal-botoes{display:flex;gap:10px;}
+  .modal-botoes button{flex:1;padding:15px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;}
+  .modal-botoes .cancelar{background:#f0f2f5;color:var(--texto);}
+  .modal-botoes .confirmar{background:var(--azul);color:#fff;}
+
+  .confete{position:fixed;inset:0;pointer-events:none;z-index:100;overflow:hidden;}
+  .confete span{position:absolute;width:8px;height:14px;border-radius:2px;animation:cair linear forwards;}
+  @keyframes cair{to{transform:translateY(110vh) rotate(720deg);opacity:0;}}
+
+  .toast{
+    position:fixed;bottom:calc(24px + env(safe-area-inset-bottom));
+    left:50%;transform:translateX(-50%) translateY(100px);
+    background:#1c1c1c;color:#fff;padding:12px 20px;border-radius:24px;
+    font-size:13px;font-weight:600;z-index:200;opacity:0;
+    transition:all .3s cubic-bezier(.4,0,.2,1);pointer-events:none;
+    max-width:calc(100% - 40px);text-align:center;
+  }
+  .toast.ativo{transform:translateX(-50%) translateY(0);opacity:1;}
+
+  .erro-box{
+    position:fixed;inset:auto 12px 12px 12px;background:#ffebee;color:#b71c1c;
+    border:1px solid #ef9a9a;border-radius:12px;padding:14px;font-size:12px;
+    font-family:monospace;white-space:pre-wrap;z-index:999;display:none;
+    max-height:40vh;overflow:auto;
+  }
+  .erro-box.ativo{display:block;}
+  .erro-box strong{display:block;margin-bottom:6px;font-family:inherit;}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <section class="tela ativa" id="tela-home">
+    <div class="home-topo">
+      <div class="logo">💰</div>
+      <h1>ECO</h1>
+      <div class="tagline">DECISÃO DE COMPRA</div>
+    </div>
+
+    <div class="resumo">
+      <div class="resumo-card">
+        <div class="rotulo">Decisões</div>
+        <div class="valor" id="stat-decisoes">0</div>
+      </div>
+      <div class="resumo-card">
+        <div class="rotulo">Economizado</div>
+        <div class="valor verde" id="stat-economia">R$ 0</div>
+      </div>
+    </div>
+
+    <button class="btn-principal" id="btn-nova" type="button">➕ Nova decisão</button>
+    <button class="btn-instalar" id="btn-instalar" type="button">📲 Instalar app</button>
+
+    <div class="historico-titulo">
+      <span>Histórico</span>
+      <button id="btn-limpar" type="button" style="display:none;">Limpar tudo</button>
+    </div>
+    <div class="historico" id="historico">
+      <div class="historico-vazio">Nenhuma decisão ainda.<br>Toque em <strong>Nova decisão</strong> para começar.</div>
+    </div>
+  </section>
+
+  <section class="tela" id="tela-pergunta">
+    <div class="fluxo-topo">
+      <button class="btn-voltar" id="btn-voltar-pergunta" type="button">←</button>
+      <div class="progresso"><div class="fill" id="progresso-fill"></div></div>
+      <div class="contador" id="contador">1/7</div>
+    </div>
+
+    <div class="pergunta-area">
+      <div class="pergunta-num" id="pergunta-num">PERGUNTA 1</div>
+      <h2 class="pergunta-titulo" id="pergunta-titulo">—</h2>
+      <p class="pergunta-dica" id="pergunta-dica">—</p>
+
+      <div class="slider-wrap">
+        <div class="nota-grande" id="nota-grande">5<small>/10</small></div>
+        <input type="range" min="0" max="10" value="5" id="slider">
+        <div class="escala">
+          <span>0 · nada</span>
+          <span>10 · muito</span>
+        </div>
+      </div>
+
+      <button class="btn-continuar" id="btn-continuar" type="button">Continuar →</button>
+    </div>
+  </section>
+
+  <section class="tela" id="tela-resultado">
+    <div class="resultado-area" id="resultado-area">
+      <div class="resultado-icone" id="res-icone">✅</div>
+      <div class="resultado-veredito" id="res-veredito">COMPRE!</div>
+      <div class="resultado-nota">Nota: <strong id="res-nota">0</strong> / 70</div>
+      <p class="resultado-msg" id="res-msg">—</p>
+
+      <div class="resultado-detalhes">
+        <h3>Suas respostas</h3>
+        <div id="res-detalhes"></div>
+      </div>
+
+      <div class="resultado-acoes">
+        <button class="btn-principal" id="btn-concluir" type="button">Concluir</button>
+        <button class="btn-secundario" id="btn-reiniciar" type="button">↺ Refazer</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <h2>Nova decisão</h2>
+    <p>O que você está pensando em comprar?</p>
+    <input type="text" id="input-nome" placeholder="Ex: Fone de ouvido novo" autocomplete="off" maxlength="60">
+    <div class="valor-input">
+      <span>R$</span>
+      <input type="number" id="input-valor" placeholder="0,00" inputmode="decimal" min="0" step="0.01">
+    </div>
+    <div class="modal-botoes">
+      <button class="cancelar" id="btn-cancelar" type="button">Cancelar</button>
+      <button class="confirmar" id="btn-comecar" type="button">Começar</button>
+    </div>
+  </div>
+</div>
+
+<div class="confete" id="confete"></div>
+<div class="toast" id="toast"></div>
+<div class="erro-box" id="erro-box"><strong>⚠️ Erro no app</strong><span id="erro-msg"></span></div>
+
+<script>
+/* ============================================================
+   Captura de erros — mostra na tela se algo quebrar
+   ============================================================ */
+window.addEventListener('error', function(e){
+  var box = document.getElementById('erro-box');
+  var msg = document.getElementById('erro-msg');
+  if(box && msg){
+    box.classList.add('ativo');
+    msg.textContent = (e.message || 'Erro desconhecido') + '\n' + (e.filename||'') + ':' + (e.lineno||'');
+  }
+});
+
+/* ============================================================
+   PERGUNTAS
+   ============================================================ */
+var PERGUNTAS = [
+  { id:1, titulo:'Resolve problema <em>REAL</em>?', dica:'10 = resolve algo essencial. 0 = é só capricho.' },
+  { id:2, titulo:'Vou lembrar em <em>1 MÊS</em>?', dica:'10 = vai fazer diferença duradoura. 0 = vou esquecer.' },
+  { id:3, titulo:'O que <em>MUDOU</em> desde ontem?', dica:'10 = surgiu uma necessidade nova. 0 = nada mudou, é só desejo.' },
+  { id:4, titulo:'Alinhado com <em>METAS</em> de 12 meses?', dica:'10 = te aproxima dos seus objetivos. 0 = te afasta.' },
+  { id:5, titulo:'Trabalharia <em>X horas</em> por isso?', dica:'10 = valeria trabalhar horas por isso. 0 = não vale.' },
+  { id:6, titulo:'Prefere <em>DINHEIRO</em> em 5 anos?', dica:'10 = prefere o dinheiro investido. 0 = prefere o produto agora.' },
+  { id:7, titulo:'Custo do <em>ARREPENDIMENTO</em>?', dica:'10 = não vai se arrepender. 0 = vai se arrepender muito.' }
+];
+
+/* ============================================================
+   ESTADO
+   ============================================================ */
+var compraAtual = { nome:'', valor:0, notas:[], data:null };
+var indicePergunta = 0;
+
+/* ============================================================
+   STORAGE
+   ============================================================ */
+var STORAGE_KEY = 'eco_compras_v1';
+
+function carregarHistorico(){
+  try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch(e){ return []; }
+}
+function salvarHistorico(lista){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(lista));
+}
+function adicionarAoHistorico(item){
+  var lista = carregarHistorico();
+  lista.unshift(item);
+  salvarHistorico(lista);
+}
+
+/* ============================================================
+   HELPERS — atenção: usamos "el" em vez de "$"
+   O "$" nativo do Firefox causa o erro "focus is read-only"
+   ============================================================ */
+function el(id){ return document.getElementById(id); }
+
+function irPara(id){
+  var telas = document.querySelectorAll('.tela');
+  for(var i=0;i<telas.length;i++) telas[i].classList.remove('ativa');
+  el(id).classList.add('ativa');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+var toastTimer;
+function toast(msg){
+  var t = el('toast');
+  t.textContent = msg;
+  t.classList.add('ativo');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove('ativo'); }, 2200);
+}
+
+/* ============================================================
+   MODAL NOVA DECISÃO
+   ============================================================ */
+var modal = el('modal');
+var inputNome = el('input-nome');
+var inputValor = el('input-valor');
+
+el('btn-nova').addEventListener('click', function(){
+  inputNome.value = '';
+  inputValor.value = '';
+  modal.classList.add('ativo');
+  setTimeout(function(){ inputNome.focus(); }, 300);
+});
+
+el('btn-cancelar').addEventListener('click', function(){
+  modal.classList.remove('ativo');
+});
+
+modal.addEventListener('click', function(e){
+  if(e.target === modal) modal.classList.remove('ativo');
+});
+
+el('btn-comecar').addEventListener('click', iniciarDecisao);
+
+inputNome.addEventListener('keydown', function(e){
+  if(e.key === 'Enter') inputValor.focus();
+});
+inputValor.addEventListener('keydown', function(e){
+  if(e.key === 'Enter') iniciarDecisao();
+});
+
+function iniciarDecisao(){
+  var nome = inputNome.value.trim();
+  var valor = parseFloat(inputValor.value) || 0;
+
+  if(!nome){
+    toast('Dê um nome para a compra');
+    inputNome.focus();
+    return;
+  }
+
+  compraAtual = { nome: nome, valor: valor, notas: [], data: new Date().toISOString() };
+  indicePergunta = 0;
+  modal.classList.remove('ativo');
+  renderizarPergunta();
+  irPara('tela-pergunta');
+}
+
+/* ============================================================
+   PERGUNTAS
+   ============================================================ */
+var slider = el('slider');
+var notaGrande = el('nota-grande');
+
+function renderizarPergunta(){
+  var p = PERGUNTAS[indicePergunta];
+  el('pergunta-num').textContent = 'PERGUNTA ' + p.id;
+  el('pergunta-titulo').innerHTML = p.titulo;
+  el('pergunta-dica').textContent = p.dica;
+
+  var pct = (indicePergunta / PERGUNTAS.length) * 100;
+  el('progresso-fill').style.width = pct + '%';
+  el('contador').textContent = (indicePergunta + 1) + '/' + PERGUNTAS.length;
+
+  var valorAtual = (compraAtual.notas[indicePergunta] !== undefined) ? compraAtual.notas[indicePergunta] : 5;
+  slider.value = valorAtual;
+  atualizarNotaGrande(valorAtual);
+
+  el('btn-continuar').textContent = (indicePergunta === PERGUNTAS.length - 1) ? 'Ver resultado 🎯' : 'Continuar →';
+}
+
+function atualizarNotaGrande(v){
+  notaGrande.innerHTML = v + '<small>/10</small>';
+  var cor = v<=2 ? '#c62828' : v<=4 ? '#e65100' : v<=6 ? '#f9a825' : v<=8 ? '#9e9d24' : '#2e7d32';
+  notaGrande.style.color = cor;
+}
+
+slider.addEventListener('input', function(e){
+  atualizarNotaGrande(parseInt(e.target.value));
+});
+
+el('btn-continuar').addEventListener('click', function(){
+  compraAtual.notas[indicePergunta] = parseInt(slider.value);
+  if(indicePergunta < PERGUNTAS.length - 1){
+    indicePergunta++;
+    renderizarPergunta();
+  } else {
+    mostrarResultado();
+  }
+});
+
+el('btn-voltar-pergunta').addEventListener('click', function(){
+  if(indicePergunta > 0){
+    compraAtual.notas[indicePergunta] = parseInt(slider.value);
+    indicePergunta--;
+    renderizarPergunta();
+  } else {
+    if(confirm('Descartar esta decisão?')) irPara('tela-home');
+  }
+});
+
+/* ============================================================
+   RESULTADO
+   ============================================================ */
+function calcularResultado(soma){
+  if(soma >= 56) return { classe:'ok', icone:'✅', veredito:'COMPRE!', msg:'Sua decisão passou no teste. Pode comprar com tranquilidade.' };
+  if(soma >= 42) return { classe:'pense', icone:'⚠️', veredito:'PENSE 7 DIAS', msg:'Não é um <strong>não</strong>, mas também não é um <strong>sim</strong>. Espere uma semana e reavalie.' };
+  return { classe:'nao', icone:'❌', veredito:'NÃO COMPRE!', msg:'Provavelmente é impulso. Se ainda quiser em 30 dias, refaça o teste.' };
+}
+
+function mostrarResultado(){
+  var soma = compraAtual.notas.reduce(function(a,b){ return a + (b||0); }, 0);
+  var r = calcularResultado(soma);
+
+  var area = el('resultado-area');
+  area.className = 'resultado-area ' + r.classe;
+  el('res-icone').textContent = r.icone;
+  el('res-veredito').textContent = r.veredito;
+  el('res-nota').textContent = soma;
+  el('res-msg').innerHTML = r.msg;
+
+  el('res-detalhes').innerHTML = PERGUNTAS.map(function(p,i){
+    var textoLimpo = p.titulo.replace(/<[^>]+>/g,'');
+    return '<div class="detalhe-linha"><span>' + p.id + '. ' + textoLimpo + '</span><span>' + (compraAtual.notas[i] || 0) + '/10</span></div>';
+  }).join('') +
+  '<div class="detalhe-linha" style="border-top:2px solid #e0e3ea;margin-top:4px;padding-top:8px;"><span><strong>TOTAL</strong></span><span><strong>' + soma + '/70</strong></span></div>';
+
+  irPara('tela-resultado');
+  if(r.classe === 'ok') dispararConfete();
+}
+
+function dispararConfete(){
+  var cores = ['#2e7d32','#1a237e','#f9a825','#e65100','#3949ab'];
+  var cont = el('confete');
+  for(var i=0;i<50;i++){
+    var s = document.createElement('span');
+    s.style.left = (Math.random()*100) + 'vw';
+    s.style.top = '-20px';
+    s.style.background = cores[Math.floor(Math.random()*cores.length)];
+    s.style.animationDuration = (1.8 + Math.random()*1.4) + 's';
+    s.style.animationDelay = (Math.random()*.4) + 's';
+    cont.appendChild(s);
+    (function(elAtual){ setTimeout(function(){ elAtual.remove(); }, 3500); })(s);
+  }
+}
+
+el('btn-reiniciar').addEventListener('click', function(){
+  indicePergunta = 0;
+  compraAtual.notas = [];
+  renderizarPergunta();
+  irPara('tela-pergunta');
+});
+
+el('btn-concluir').addEventListener('click', function(){
+  var soma = compraAtual.notas.reduce(function(a,b){ return a + (b||0); }, 0);
+  var r = calcularResultado(soma);
+  adicionarAoHistorico({
+    nome: compraAtual.nome,
+    valor: compraAtual.valor,
+    soma: soma,
+    classe: r.classe,
+    veredito: r.veredito,
+    icone: r.icone,
+    data: compraAtual.data || new Date().toISOString()
+  });
+  toast('Decisão salva!');
+  renderizarHome();
+  irPara('tela-home');
+});
+
+/* ============================================================
+   HOME
+   ============================================================ */
+function formatarMoeda(v){
+  return 'R$ ' + (v||0).toLocaleString('pt-BR',{minimumFractionDigits:0, maximumFractionDigits:0});
+}
+function formatarData(iso){
+  try{
+    var d = new Date(iso);
+    return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'short'});
+  }catch(e){ return ''; }
+}
+
+function renderizarHome(){
+  var lista = carregarHistorico();
+
+  el('stat-decisoes').textContent = lista.length;
+
+  var economia = lista
+    .filter(function(i){ return i.classe === 'nao' || i.classe === 'pense'; })
+    .reduce(function(acc,i){ return acc + (i.valor||0); }, 0);
+  el('stat-economia').textContent = formatarMoeda(economia);
+
+  var btnLimpar = el('btn-limpar');
+  btnLimpar.style.display = lista.length ? 'inline' : 'none';
+
+  var cont = el('historico');
+  if(!lista.length){
+    cont.innerHTML = '<div class="historico-vazio">Nenhuma decisão ainda.<br>Toque em <strong>Nova decisão</strong> para começar.</div>';
+    return;
+  }
+
+  cont.innerHTML = lista.map(function(i){
+    var classe = i.classe || 'nao';
+    return '<div class="item ' + classe + '">' +
+      '<div class="icone">' + (i.icone || '❌') + '</div>' +
+      '<div class="info">' +
+        '<div class="nome">' + escapeHtml(i.nome) + '</div>' +
+        '<div class="meta">' + formatarData(i.data) + (i.valor ? ' · ' + formatarMoeda(i.valor) : '') + '</div>' +
+      '</div>' +
+      '<div class="nota ' + classe + '">' + i.soma + '/70</div>' +
+    '</div>';
+  }).join('');
+}
+
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+el('btn-limpar').addEventListener('click', function(){
+  if(confirm('Apagar todo o histórico? Isso não pode ser desfeito.')){
+    salvarHistorico([]);
+    renderizarHome();
+    toast('Histórico apagado');
+  }
+});
+
+/* ============================================================
+   INSTALAR COMO APP (PWA)
+   ============================================================ */
+var deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();
+  deferredPrompt = e;
+  el('btn-instalar').classList.add('visivel');
+});
+
+el('btn-instalar').addEventListener('click', function(){
+  if(!deferredPrompt){
+    toast('Use o menu do navegador para adicionar à tela inicial');
+    return;
+  }
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(function(choice){
+    deferredPrompt = null;
+    el('btn-instalar').classList.remove('visivel');
+    toast(choice.outcome === 'accepted' ? 'App instalado!' : 'Instalação cancelada');
+  });
+});
+
+window.addEventListener('appinstalled', function(){
+  el('btn-instalar').classList.remove('visivel');
+  toast('ECO instalado com sucesso!');
+});
+
+/* ============================================================
+   SERVICE WORKER — modo offline
+   ============================================================ */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js')
+      .then(function(reg){ console.log('✅ Service Worker registrado:', reg.scope); })
+      .catch(function(err){ console.warn('⚠️ Service Worker falhou:', err); });
+  });
+}
+
+/* ============================================================
+   INICIALIZAÇÃO
+   ============================================================ */
+renderizarHome();
+console.log('✅ ECO carregado com sucesso.');
+</script>
+</body>
+</html>
