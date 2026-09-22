@@ -241,6 +241,57 @@
     max-height:40vh;overflow:auto;
   }
   .erro-box.ativo{display:block;}
+    /* ---------- GRÁFICO MENSAL ---------- */
+  .grafico-secao{
+    background:#fff;border-radius:14px;padding:14px;
+    box-shadow:var(--sombra);margin-bottom:20px;
+  }
+  .grafico-titulo{
+    font-size:11px;font-weight:800;letter-spacing:1.5px;
+    text-transform:uppercase;color:var(--texto-suave);
+    margin-bottom:14px;
+  }
+  .grafico-barras{
+    display:flex;flex-direction:column;gap:8px;
+  }
+  .grafico-linha{
+    display:flex;align-items:center;gap:10px;
+  }
+  .grafico-mes{
+    font-size:11px;font-weight:700;color:var(--texto-suave);
+    min-width:34px;text-transform:lowercase;
+  }
+  .grafico-barra-wrap{
+    flex:1;height:22px;background:#f0f2f5;
+    border-radius:6px;overflow:hidden;position:relative;
+  }
+  .grafico-barra{
+    height:100%;border-radius:6px;
+    background:linear-gradient(90deg,#2e7d32,#66bb6a);
+    transition:width .5s cubic-bezier(.4,0,.2,1);
+    min-width:2px;
+  }
+  .grafico-barra.zero{
+    background:#e0e3ea;
+  }
+  .grafico-valor{
+    font-size:11px;font-weight:800;color:var(--verde);
+    min-width:60px;text-align:right;
+    font-variant-numeric:tabular-nums;
+  }
+  .grafico-valor.zero{
+    color:var(--texto-suave);font-weight:600;
+  }
+  .grafico-total{
+    margin-top:12px;padding-top:10px;border-top:1px solid #eef0f4;
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:11px;font-weight:700;color:var(--texto-suave);
+    text-transform:uppercase;letter-spacing:1px;
+  }
+  .grafico-total span:last-child{
+    font-size:15px;font-weight:800;color:var(--verde);
+    letter-spacing:0;text-transform:none;
+  }
   .erro-box strong{display:block;margin-bottom:6px;font-family:inherit;}
 </style>
 </head>
@@ -266,6 +317,14 @@
       </div>
     </div>
 
+    <div class="grafico-secao">
+      <div class="grafico-titulo">📊 Economia por mês</div>
+      <div class="grafico-barras" id="grafico-barras"></div>
+      <div class="grafico-total">
+        <span>Total economizado</span>
+        <span id="grafico-total-valor">R$ 0</span>
+      </div>
+    </div>
     <div class="pendentes vazio" id="pendentes">
       <div class="pendentes-titulo">
         <span>⏰ Para reavaliar</span>
@@ -690,7 +749,7 @@ function renderizarPendentes(){
 
 function renderizarHome(){
   var lista = carregarHistorico();
-
+  renderizarGrafico();
   el('stat-decisoes').textContent = lista.length;
 
   var economia = lista
@@ -870,7 +929,76 @@ if ('serviceWorker' in navigator) {
       .catch(function(err){ console.warn('⚠️ Service Worker falhou:', err); });
   });
 }
+/* ============================================================
+   GRÁFICO MENSAL — economia dos últimos 6 meses
+   ============================================================ */
+function nomesMeses(){
+  return ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+}
 
+function calcularEconomiaPorMes(){
+  var lista = carregarHistorico();
+  var agora = new Date();
+  var meses = [];
+
+  /* Monta a lista dos últimos 6 meses (do mais antigo pro mais recente) */
+  for(var i = 5; i >= 0; i--){
+    var d = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
+    meses.push({
+      ano: d.getFullYear(),
+      mes: d.getMonth(),
+      rotulo: nomesMeses()[d.getMonth()],
+      total: 0
+    });
+  }
+
+  /* Soma o valor economizado (nao + pense) por mês */
+  for(var j = 0; j < lista.length; j++){
+    var item = lista[j];
+    if(item.classe !== 'nao' && item.classe !== 'pense') continue;
+    var dataItem = new Date(item.data);
+    for(var k = 0; k < meses.length; k++){
+      if(meses[k].ano === dataItem.getFullYear() && meses[k].mes === dataItem.getMonth()){
+        meses[k].total += (item.valor || 0);
+        break;
+      }
+    }
+  }
+
+  return meses;
+}
+
+function renderizarGrafico(){
+  var meses = calcularEconomiaPorMes();
+
+  /* Descobre o maior valor pra calcular a escala das barras */
+  var maior = 0;
+  var total = 0;
+  for(var i = 0; i < meses.length; i++){
+    if(meses[i].total > maior) maior = meses[i].total;
+    total += meses[i].total;
+  }
+
+  var container = el('grafico-barras');
+  if(!container) return;
+
+  container.innerHTML = meses.map(function(m){
+    var pct = maior > 0 ? (m.total / maior) * 100 : 0;
+    var zero = m.total === 0;
+    return '<div class="grafico-linha">' +
+      '<div class="grafico-mes">' + m.rotulo + '</div>' +
+      '<div class="grafico-barra-wrap">' +
+        '<div class="grafico-barra ' + (zero ? 'zero' : '') + '" style="width:' + pct + '%"></div>' +
+      '</div>' +
+      '<div class="grafico-valor ' + (zero ? 'zero' : '') + '">' + (zero ? '—' : formatarMoeda(m.total)) + '</div>' +
+    '</div>';
+  }).join('');
+
+  var totalEl = el('grafico-total-valor');
+  if(totalEl){
+    totalEl.textContent = formatarMoeda(total);
+  }
+}
 renderizarHome();
 console.log('✅ ECO v2 carregado com sucesso.');
 </script>
