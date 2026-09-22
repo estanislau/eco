@@ -307,6 +307,32 @@
   }
   body.escuro .btn-tema{background:var(--card);}
   
+    /* ---------- MODAL DE OPÇÕES DO ITEM ---------- */
+  .item.clicavel{cursor:pointer;transition:transform .1s, box-shadow .15s;}
+  .item.clicavel:active{transform:scale(.98);box-shadow:0 4px 12px rgba(0,0,0,.12);}
+
+  .modal-box .opcoes-item{display:flex;flex-direction:column;gap:10px;}
+  .modal-box .opcoes-item button{
+    display:flex;align-items:center;gap:12px;
+    padding:16px;border:none;border-radius:12px;
+    font-size:14px;font-weight:700;cursor:pointer;text-align:left;
+    background:#f0f2f5;color:var(--texto);
+    transition:background .15s;
+  }
+  .modal-box .opcoes-item button:active{background:#e0e3ea;}
+  .modal-box .opcoes-item button .icone-op{font-size:20px;}
+  .modal-box .opcoes-item button .texto-op{display:flex;flex-direction:column;gap:2px;}
+  .modal-box .opcoes-item button .texto-op small{
+    font-size:11px;font-weight:600;color:var(--texto-suave);letter-spacing:0;
+  }
+  .modal-box .opcoes-item button.perigo{background:#ffebee;color:var(--vermelho);}
+  .modal-box .opcoes-item button.perigo:active{background:#ffcdd2;}
+  .modal-box .opcoes-item button.perigo small{color:var(--vermelho);opacity:.75;}
+
+  body.escuro .modal-box .opcoes-item button{background:#232733;color:var(--texto);}
+  body.escuro .modal-box .opcoes-item button:active{background:#2a2f3d;}
+  body.escuro .modal-box .opcoes-item button.perigo{background:var(--vermelho-bg);color:var(--vermelho);}
+  
   .erro-box.ativo{display:block;}
   
     /* ---------- GRÁFICO MENSAL ---------- */
@@ -490,6 +516,33 @@
       <button class="cancelar" id="btn-imp-cancelar" type="button">Cancelar</button>
       <button class="confirmar" id="btn-imp-mesclar" type="button">Mesclar</button>
       <button class="confirmar" id="btn-imp-substituir" type="button" style="background:#c62828;">Substituir</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal" id="modal-item">
+  <div class="modal-box">
+    <h2 id="item-titulo">—</h2>
+    <p id="item-sub">O que você quer fazer?</p>
+    <div class="opcoes-item">
+      <button id="btn-item-refazer" type="button">
+        <span class="icone-op">✏️</span>
+        <span class="texto-op">
+          Refazer teste
+          <small>Responder as 7 perguntas de novo</small>
+        </span>
+      </button>
+      <button id="btn-item-apagar" class="perigo" type="button">
+        <span class="icone-op">🗑️</span>
+        <span class="texto-op">
+          Apagar decisão
+          <small>Remove só este item do histórico</small>
+        </span>
+      </button>
+    </div>
+    <div class="modal-botoes" style="margin-top:14px;">
+      <button class="cancelar" id="btn-item-cancelar" type="button">Cancelar</button>
     </div>
   </div>
 </div>
@@ -720,7 +773,22 @@ el('btn-concluir').addEventListener('click', function(){
     data: compraAtual.data || new Date().toISOString()
   };
 
-  adicionarAoHistorico(item);
+    if(compraAtual.id){
+    /* Refazendo: substitui o item antigo */
+    var listaAtual = carregarHistorico().filter(function(i){ return i.id !== compraAtual.id; });
+    listaAtual.unshift(item);
+    salvarHistorico(listaAtual);
+  } else {
+    adicionarAoHistorico(item);
+  }
+
+  /* Se estava refazendo, remove pendente antigo do mesmo id */
+  if(compraAtual.id){
+    var pend = carregarPendentes().filter(function(p){
+      return !(p.nome === item.nome && p.valor === item.valor);
+    });
+    salvarPendentes(pend);
+  }
 
   /* Se foi "pense", agenda reavaliação em 7 dias */
   if(r.classe === 'pense'){
@@ -839,7 +907,7 @@ function renderizarHome(){
 
   cont.innerHTML = lista.map(function(i){
     var classe = i.classe || 'nao';
-    return '<div class="item ' + classe + '">' +
+    return '<div class="item ' + classe + ' clicavel" data-id="' + i.id + '">' +
       '<div class="icone">' + (i.icone || '❌') + '</div>' +
       '<div class="info">' +
         '<div class="nome">' + escapeHtml(i.nome) + '</div>' +
@@ -849,6 +917,14 @@ function renderizarHome(){
     '</div>';
   }).join('');
 }
+
+
+document.addEventListener('click', function(e){
+  var alvo = e.target.closest ? e.target.closest('.item.clicavel') : null;
+  if(!alvo) return;
+  var id = alvo.getAttribute('data-id');
+  if(id) abrirOpcoesItem(id);
+});
 
 function escapeHtml(s){
   return String(s||'').replace(/[&<>"']/g, function(c){
@@ -1109,6 +1185,67 @@ el('btn-tema').addEventListener('click', alternarTema);
 
 /* Aplica o tema salvo/sistema ao carregar */
 aplicarTema(carregarTema());
+
+/* ============================================================
+   MODAL DE OPÇÕES DO ITEM — editar / apagar
+   ============================================================ */
+var itemSelecionado = null;
+
+function abrirOpcoesItem(id){
+  var lista = carregarHistorico();
+  var item = null;
+  for(var i = 0; i < lista.length; i++){
+    if(lista[i].id === id){ item = lista[i]; break; }
+  }
+  if(!item){ toast('Item não encontrado'); return; }
+
+  itemSelecionado = item;
+  el('item-titulo').textContent = item.nome;
+  el('item-sub').textContent = 'Nota: ' + item.soma + '/70 · ' + formatarMoeda(item.valor) + ' · ' + formatarData(item.data);
+  el('modal-item').classList.add('ativo');
+}
+
+function fecharOpcoesItem(){
+  el('modal-item').classList.remove('ativo');
+  itemSelecionado = null;
+}
+
+function refazerItem(){
+  if(!itemSelecionado) return;
+  var item = itemSelecionado;
+
+  compraAtual = {
+    id: item.id,  /* mantém o id pra substituir no histórico */
+    nome: item.nome,
+    valor: item.valor,
+    notas: (item.notas || []).slice(),
+    data: new Date().toISOString()
+  };
+  indicePergunta = 0;
+  fecharOpcoesItem();
+  renderizarPergunta();
+  irPara('tela-pergunta');
+  toast('Refazendo: ' + item.nome);
+}
+
+function apagarItem(){
+  if(!itemSelecionado) return;
+  if(!confirm('Apagar "' + itemSelecionado.nome + '" do histórico?')) return;
+  var id = itemSelecionado.id;
+  var lista = carregarHistorico().filter(function(i){ return i.id !== id; });
+  salvarHistorico(lista);
+  fecharOpcoesItem();
+  renderizarHome();
+  toast('Decisão apagada');
+}
+
+el('btn-item-refazer').addEventListener('click', refazerItem);
+el('btn-item-apagar').addEventListener('click', apagarItem);
+el('btn-item-cancelar').addEventListener('click', fecharOpcoesItem);
+el('modal-item').addEventListener('click', function(e){
+  if(e.target === el('modal-item')) fecharOpcoesItem();
+});
+
 renderizarHome();
 console.log('✅ ECO v2 carregado com sucesso.');
 </script>
