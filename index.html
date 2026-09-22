@@ -240,24 +240,45 @@
     font-family:monospace;white-space:pre-wrap;z-index:999;display:none;
     max-height:40vh;overflow:auto;
   }
+    
     /* ---------- TEMA ESCURO ---------- */
   body.escuro{
     --bg:#0f1117;
     --card:#1a1d27;
-    --texto:#e8eaf0;
-    --texto-suave:#9aa0b0;
-    --azul:#7986cb;
-    --azul-med:#5c6bc0;
+    --texto:#eef0f6;
+    --texto-suave:#b0b6c8;
+    --azul:#9fa8da;
+    --azul-med:#7986cb;
     --azul-claro:#1e2233;
-    --verde:#66bb6a;
+    --verde:#81c784;
     --verde-bg:#1b3a1e;
-    --amarelo:#ffb74d;
+    --amarelo:#ffca6b;
     --amarelo-bg:#3a2f0e;
-    --vermelho:#ef5350;
+    --vermelho:#ef7b7b;
     --vermelho-bg:#3a1a1a;
     --sombra:0 8px 28px rgba(0,0,0,.45);
     background:#0f1117;
   }
+
+  /* Valores numéricos no modo escuro — garantir contraste */
+  body.escuro .resumo-card .valor{ color:var(--azul); }
+  body.escuro .resumo-card .valor.verde{ color:var(--verde); }
+  body.escuro .grafico-valor{ color:var(--verde); }
+  body.escuro .grafico-valor.zero{ color:var(--texto-suave); }
+  body.escuro .grafico-total span:last-child{ color:var(--verde); }
+  body.escuro .item .nota{ color:var(--azul); }
+  body.escuro .item .nota.ok{ color:var(--verde); }
+  body.escuro .item .nota.pense{ color:var(--amarelo); }
+  body.escuro .item .nota.nao{ color:var(--vermelho); }
+  body.escuro .resultado-nota strong{ color:var(--texto); }
+  body.escuro .resultado-area.ok .resultado-veredito{ color:var(--verde); }
+  body.escuro .resultado-area.pense .resultado-veredito{ color:var(--amarelo); }
+  body.escuro .resultado-area.nao .resultado-veredito{ color:var(--vermelho); }
+  body.escuro .detalhe-linha span:last-child{ color:var(--texto); }
+  body.escuro .btn-voltar{ color:var(--azul); }
+  body.escuro .pergunta-num{ background:var(--azul-claro); color:var(--azul); }
+  body.escuro .nota-grande{ color:var(--azul); }
+
   body.escuro .home-topo h1{color:var(--azul);}
   body.escuro .home-topo .tagline{color:var(--azul-med);}
   body.escuro .resumo-card,
@@ -790,17 +811,11 @@ el('btn-concluir').addEventListener('click', function(){
     salvarPendentes(pend);
   }
 
-  /* Se foi "pense", agenda reavaliação em 7 dias */
+    /* Se foi "pense", agenda reavaliação em 7 dias */
   if(r.classe === 'pense'){
     var daqui7 = new Date();
     daqui7.setDate(daqui7.getDate() + 7);
-    adicionarPendente({  /* Se estava refazendo, remove pendente antigo do mesmo id */
-  if(compraAtual.id){
-    var pend = carregarPendentes().filter(function(p){
-      return !(p.nome === item.nome && p.valor === item.valor);
-    });
-    salvarPendentes(pend);
-  }
+    adicionarPendente({
       id: 'p_' + Date.now(),
       nome: item.nome,
       valor: item.valor,
@@ -814,9 +829,10 @@ el('btn-concluir').addEventListener('click', function(){
     toast('Decisão salva!');
   }
 
+  compraAtual = { nome:'', valor:0, notas:[], data:null };
   renderizarHome();
   irPara('tela-home');
-});
+});  
 
 /* ---------- REAVALIAR ---------- */
 function reavaliarPendente(id){
@@ -913,16 +929,16 @@ function renderizarHome(){
 
   cont.innerHTML = lista.map(function(i){
     var classe = i.classe || 'nao';
+    var soma = (typeof i.soma === 'number') ? i.soma : 0;
     return '<div class="item ' + classe + ' clicavel" data-id="' + i.id + '">' +
       '<div class="icone">' + (i.icone || '❌') + '</div>' +
       '<div class="info">' +
         '<div class="nome">' + escapeHtml(i.nome) + '</div>' +
         '<div class="meta">' + formatarData(i.data) + (i.valor ? ' · ' + formatarMoeda(i.valor) : '') + '</div>' +
       '</div>' +
-      '<div class="nota ' + classe + '">' + i.soma + '/70</div>' +
+      '<div class="nota ' + classe + '">' + soma + '/70</div>' +
     '</div>';
   }).join('');
-}
 
 
 document.addEventListener('click', function(e){

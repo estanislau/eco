@@ -1,5 +1,5 @@
 /* Service Worker — ECO · Decisão de Compra */
-const CACHE = 'eco-v5';
+const CACHE = 'eco-v6';
 const ARQUIVOS = [
   './',
   './index.html',
@@ -8,7 +8,6 @@ const ARQUIVOS = [
 ];
 
 self.addEventListener('install', (event) => {
-  console.log('[SW] Instalando e pré-cacheando arquivos...');
   event.waitUntil(
     caches.open(CACHE)
       .then((cache) => cache.addAll(ARQUIVOS))
@@ -17,7 +16,6 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Ativando e limpando caches antigos...');
   event.waitUntil(
     caches.keys()
       .then((keys) =>
@@ -31,15 +29,23 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  // Não interceptar requisições de outros domínios
+  if (!event.request.url.startsWith(self.location.origin)) return;
+
   event.respondWith(
     caches.match(event.request).then((respostaCache) => {
       if (respostaCache) return respostaCache;
+
       return fetch(event.request)
         .then((respostaRede) => {
-          return caches.open(CACHE).then((cache) => {
-            cache.put(event.request, respostaRede.clone());
+          // Só cachear respostas válidas
+          if (!respostaRede || respostaRede.status !== 200 || respostaRede.type === 'opaque') {
             return respostaRede;
-          });
+          }
+          const clone = respostaRede.clone();
+          caches.open(CACHE).then((cache) => cache.put(event.request, clone));
+          return respostaRede;
         })
         .catch(() => caches.match('./index.html'));
     })
