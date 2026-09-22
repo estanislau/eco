@@ -794,7 +794,13 @@ el('btn-concluir').addEventListener('click', function(){
   if(r.classe === 'pense'){
     var daqui7 = new Date();
     daqui7.setDate(daqui7.getDate() + 7);
-    adicionarPendente({
+    adicionarPendente({  /* Se estava refazendo, remove pendente antigo do mesmo id */
+  if(compraAtual.id){
+    var pend = carregarPendentes().filter(function(p){
+      return !(p.nome === item.nome && p.valor === item.valor);
+    });
+    salvarPendentes(pend);
+  }
       id: 'p_' + Date.now(),
       nome: item.nome,
       valor: item.valor,

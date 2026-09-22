@@ -1,5 +1,5 @@
 /* Service Worker — ECO · Decisão de Compra */
-const CACHE = 'eco-v4';
+const CACHE = 'eco-v5';
 const ARQUIVOS = [
   './',
   './index.html',
