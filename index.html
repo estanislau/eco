@@ -240,7 +240,75 @@
     font-family:monospace;white-space:pre-wrap;z-index:999;display:none;
     max-height:40vh;overflow:auto;
   }
+    /* ---------- TEMA ESCURO ---------- */
+  body.escuro{
+    --bg:#0f1117;
+    --card:#1a1d27;
+    --texto:#e8eaf0;
+    --texto-suave:#9aa0b0;
+    --azul:#7986cb;
+    --azul-med:#5c6bc0;
+    --azul-claro:#1e2233;
+    --verde:#66bb6a;
+    --verde-bg:#1b3a1e;
+    --amarelo:#ffb74d;
+    --amarelo-bg:#3a2f0e;
+    --vermelho:#ef5350;
+    --vermelho-bg:#3a1a1a;
+    --sombra:0 8px 28px rgba(0,0,0,.45);
+    background:#0f1117;
+  }
+  body.escuro .home-topo h1{color:var(--azul);}
+  body.escuro .home-topo .tagline{color:var(--azul-med);}
+  body.escuro .resumo-card,
+  body.escuro .item,
+  body.escuro .historico-vazio,
+  body.escuro .grafico-secao,
+  body.escuro .resultado-detalhes,
+  body.escuro .modal-box{background:var(--card);}
+  body.escuro .historico-vazio{color:var(--texto-suave);}
+  body.escuro .item .nome{color:var(--texto);}
+  body.escuro .item .meta{color:var(--texto-suave);}
+  body.escuro .btn-secundario,
+  body.escuro .btn-backup{
+    background:var(--card);color:var(--texto);border-color:#2a2f3d;
+  }
+  body.escuro .btn-voltar{background:var(--card);color:var(--azul);}
+  body.escuro .pergunta-titulo{color:var(--texto);}
+  body.escuro .pergunta-titulo em{color:var(--azul);}
+  body.escuro .pergunta-dica{color:var(--texto-suave);}
+  body.escuro .grafico-barra-wrap{background:#2a2f3d;}
+  body.escuro .grafico-barra.zero{background:#2a2f3d;}
+  body.escuro .grafico-total{border-top-color:#2a2f3d;}
+  body.escuro .detalhe-linha{border-bottom-color:#2a2f3d;color:var(--texto-suave);}
+  body.escuro .detalhe-linha span:last-child{color:var(--texto);}
+  body.escuro .resultado-nota strong,
+  body.escuro .resultado-msg strong{color:var(--texto);}
+  body.escuro .progresso{background:#2a2f3d;}
+  body.escuro .pendentes{background:var(--amarelo-bg);border-color:var(--amarelo);}
+  body.escuro .pendente{background:var(--card);}
+  body.escuro .pendente .nome{color:var(--texto);}
+  body.escuro .pendente.vencido{background:var(--vermelho-bg);}
+  body.escuro .modal-box input[type=text],
+  body.escuro .modal-box .valor-input{
+    background:#232733;color:var(--texto);border-color:#2a2f3d;
+  }
+  body.escuro .modal-box input{color:var(--texto);}
+  body.escuro .modal-botoes .cancelar{background:#232733;color:var(--texto);}
+  body.escuro .toast{background:#e8eaf0;color:#1c1c1c;}
+
+  /* Botão de tema */
+  .btn-tema{
+    position:absolute;top:16px;right:16px;
+    width:40px;height:40px;border-radius:50%;border:none;
+    background:#fff;box-shadow:var(--sombra);cursor:pointer;
+    font-size:18px;display:flex;align-items:center;justify-content:center;
+    z-index:10;
+  }
+  body.escuro .btn-tema{background:var(--card);}
+  
   .erro-box.ativo{display:block;}
+  
     /* ---------- GRÁFICO MENSAL ---------- */
   .grafico-secao{
     background:#fff;border-radius:14px;padding:14px;
@@ -300,6 +368,7 @@
 <div class="app">
 
   <section class="tela ativa" id="tela-home">
+      <button class="btn-tema" id="btn-tema" type="button" aria-label="Alternar tema">🌙</button>
     <div class="home-topo">
       <div class="logo">💰</div>
       <h1>ECO</h1>
@@ -999,6 +1068,47 @@ function renderizarGrafico(){
     totalEl.textContent = formatarMoeda(total);
   }
 }
+/* ============================================================
+   TEMA ESCURO
+   ============================================================ */
+var TEMA_KEY = 'eco_tema_v1';
+
+function aplicarTema(tema){
+  if(tema === 'escuro'){
+    document.body.classList.add('escuro');
+    var b = el('btn-tema');
+    if(b) b.textContent = '☀️';
+  } else {
+    document.body.classList.remove('escuro');
+    var b2 = el('btn-tema');
+    if(b2) b2.textContent = '🌙';
+  }
+}
+
+function carregarTema(){
+  var salvo = null;
+  try{ salvo = localStorage.getItem(TEMA_KEY); }catch(e){}
+  if(salvo === 'escuro' || salvo === 'claro'){
+    return salvo;
+  }
+  /* Sem preferência salva: segue o sistema */
+  if(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches){
+    return 'escuro';
+  }
+  return 'claro';
+}
+
+function alternarTema(){
+  var atual = document.body.classList.contains('escuro') ? 'escuro' : 'claro';
+  var novo = atual === 'escuro' ? 'claro' : 'escuro';
+  aplicarTema(novo);
+  try{ localStorage.setItem(TEMA_KEY, novo); }catch(e){}
+}
+
+el('btn-tema').addEventListener('click', alternarTema);
+
+/* Aplica o tema salvo/sistema ao carregar */
+aplicarTema(carregarTema());
 renderizarHome();
 console.log('✅ ECO v2 carregado com sucesso.');
 </script>
