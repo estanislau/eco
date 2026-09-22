@@ -643,6 +643,31 @@ function toast(msg){
   toastTimer = setTimeout(function(){ t.classList.remove('ativo'); }, 2200);
 }
 
+/* ============================================================
+   ✅ CORRIGIDO — escapeHtml e formatadores agora no escopo global,
+   ANTES de qualquer função que os utilize.
+   ============================================================ */
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function formatarMoeda(v){
+  return 'R$ ' + (v||0).toLocaleString('pt-BR',{minimumFractionDigits:0, maximumFractionDigits:0});
+}
+function formatarData(iso){
+  try{
+    var d = new Date(iso);
+    return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'short'});
+  }catch(e){ return ''; }
+}
+function diasAte(iso){
+  var agora = new Date();
+  var alvo = new Date(iso);
+  var diff = Math.ceil((alvo - agora) / (1000*60*60*24));
+  return diff;
+}
+
 /* ---------- MODAL NOVA DECISÃO ---------- */
 var modal = el('modal');
 var inputNome = el('input-nome');
@@ -794,7 +819,7 @@ el('btn-concluir').addEventListener('click', function(){
     data: compraAtual.data || new Date().toISOString()
   };
 
-    if(compraAtual.id){
+  if(compraAtual.id){
     /* Refazendo: substitui o item antigo */
     var listaAtual = carregarHistorico().filter(function(i){ return i.id !== compraAtual.id; });
     listaAtual.unshift(item);
@@ -811,7 +836,7 @@ el('btn-concluir').addEventListener('click', function(){
     salvarPendentes(pend);
   }
 
-    /* Se foi "pense", agenda reavaliação em 7 dias */
+  /* Se foi "pense", agenda reavaliação em 7 dias */
   if(r.classe === 'pense'){
     var daqui7 = new Date();
     daqui7.setDate(daqui7.getDate() + 7);
@@ -832,7 +857,7 @@ el('btn-concluir').addEventListener('click', function(){
   compraAtual = { nome:'', valor:0, notas:[], data:null };
   renderizarHome();
   irPara('tela-home');
-});  
+});
 
 /* ---------- REAVALIAR ---------- */
 function reavaliarPendente(id){
@@ -856,22 +881,6 @@ function reavaliarPendente(id){
 }
 
 /* ---------- HOME ---------- */
-function formatarMoeda(v){
-  return 'R$ ' + (v||0).toLocaleString('pt-BR',{minimumFractionDigits:0, maximumFractionDigits:0});
-}
-function formatarData(iso){
-  try{
-    var d = new Date(iso);
-    return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'short'});
-  }catch(e){ return ''; }
-}
-function diasAte(iso){
-  var agora = new Date();
-  var alvo = new Date(iso);
-  var diff = Math.ceil((alvo - agora) / (1000*60*60*24));
-  return diff;
-}
-
 function renderizarPendentes(){
   var lista = carregarPendentes();
   var container = el('pendentes');
@@ -906,6 +915,11 @@ function renderizarPendentes(){
   }
 }
 
+/* ============================================================
+   ✅ CORRIGIDO — renderizarHome agora está devidamente fechada.
+   O addEventListener de delegação de clique foi movido para FORA
+   e DEPOIS da função.
+   ============================================================ */
 function renderizarHome(){
   var lista = carregarHistorico();
   renderizarGrafico();
@@ -939,20 +953,15 @@ function renderizarHome(){
       '<div class="nota ' + classe + '">' + soma + '/70</div>' +
     '</div>';
   }).join('');
+}
 
-
+/* ✅ CORRIGIDO — delegação de clique no escopo global, fora de renderizarHome */
 document.addEventListener('click', function(e){
   var alvo = e.target.closest ? e.target.closest('.item.clicavel') : null;
   if(!alvo) return;
   var id = alvo.getAttribute('data-id');
   if(id) abrirOpcoesItem(id);
 });
-
-function escapeHtml(s){
-  return String(s||'').replace(/[&<>"']/g, function(c){
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
-  });
-}
 
 el('btn-limpar').addEventListener('click', function(){
   if(confirm('Apagar todo o histórico e pendentes? Isso não pode ser desfeito.')){
@@ -1096,6 +1105,7 @@ if ('serviceWorker' in navigator) {
       .catch(function(err){ console.warn('⚠️ Service Worker falhou:', err); });
   });
 }
+
 /* ============================================================
    GRÁFICO MENSAL — economia dos últimos 6 meses
    ============================================================ */
@@ -1166,6 +1176,7 @@ function renderizarGrafico(){
     totalEl.textContent = formatarMoeda(total);
   }
 }
+
 /* ============================================================
    TEMA ESCURO
    ============================================================ */
