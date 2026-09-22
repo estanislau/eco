@@ -73,6 +73,36 @@
   }
   .btn-instalar.visivel{display:flex;}
 
+  /* Pendentes de reavaliação */
+  .pendentes{
+    background:#fff8e1;border:1.5px solid #f9a825;border-radius:14px;
+    padding:12px;margin-bottom:16px;
+  }
+  .pendentes.vazio{display:none;}
+  .pendentes-titulo{
+    font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;
+    color:#7d6608;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;
+  }
+  .pendentes-titulo .qtd{
+    background:#f9a825;color:#fff;font-size:10px;font-weight:800;
+    padding:2px 8px;border-radius:10px;
+  }
+  .pendente{
+    background:#fff;border-radius:10px;padding:10px 12px;margin-bottom:8px;
+    display:flex;align-items:center;gap:10px;border-left:4px solid #f9a825;
+  }
+  .pendente:last-child{margin-bottom:0;}
+  .pendente.vencido{border-left-color:var(--vermelho);background:#ffebee;}
+  .pendente .info{flex:1;min-width:0;}
+  .pendente .nome{font-size:13px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pendente .dias{font-size:11px;color:#7d6608;margin-top:2px;font-weight:600;}
+  .pendente.vencido .dias{color:var(--vermelho);}
+  .pendente .btn-reavaliar{
+    background:var(--azul);color:#fff;border:none;border-radius:8px;
+    padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;
+    flex-shrink:0;
+  }
+
   .historico-titulo{
     font-size:12px;font-weight:800;letter-spacing:1.5px;
     text-transform:uppercase;color:var(--texto-suave);
@@ -94,6 +124,20 @@
   .item .nota.pense{color:var(--amarelo);}
   .item .nota.nao{color:var(--vermelho);}
 
+  /* Backup */
+  .backup-acoes{
+    display:grid;grid-template-columns:1fr 1fr;gap:8px;
+    margin-top:20px;padding-top:20px;border-top:1px solid #e0e3ea;
+  }
+  .btn-backup{
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    padding:12px;border:1.5px solid #d5d8e0;border-radius:12px;
+    background:#fff;color:var(--texto);font-size:12px;font-weight:700;
+    cursor:pointer;
+  }
+  .btn-backup:active{background:#f0f2f5;}
+
+  /* Fluxo */
   .fluxo-topo{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
   .btn-voltar{
     width:38px;height:38px;border-radius:50%;border:none;
@@ -174,6 +218,7 @@
   .modal-botoes button{flex:1;padding:15px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;}
   .modal-botoes .cancelar{background:#f0f2f5;color:var(--texto);}
   .modal-botoes .confirmar{background:var(--azul);color:#fff;}
+  .modal-botoes .confirmar:disabled{opacity:.5;}
 
   .confete{position:fixed;inset:0;pointer-events:none;z-index:100;overflow:hidden;}
   .confete span{position:absolute;width:8px;height:14px;border-radius:2px;animation:cair linear forwards;}
@@ -221,6 +266,14 @@
       </div>
     </div>
 
+    <div class="pendentes vazio" id="pendentes">
+      <div class="pendentes-titulo">
+        <span>⏰ Para reavaliar</span>
+        <span class="qtd" id="pendentes-qtd">0</span>
+      </div>
+      <div id="pendentes-lista"></div>
+    </div>
+
     <button class="btn-principal" id="btn-nova" type="button">➕ Nova decisão</button>
     <button class="btn-instalar" id="btn-instalar" type="button">📲 Instalar app</button>
 
@@ -231,6 +284,12 @@
     <div class="historico" id="historico">
       <div class="historico-vazio">Nenhuma decisão ainda.<br>Toque em <strong>Nova decisão</strong> para começar.</div>
     </div>
+
+    <div class="backup-acoes">
+      <button class="btn-backup" id="btn-exportar" type="button">📤 Exportar</button>
+      <button class="btn-backup" id="btn-importar" type="button">📥 Importar</button>
+    </div>
+    <input type="file" id="input-importar" accept=".json,application/json" style="display:none;">
   </section>
 
   <section class="tela" id="tela-pergunta">
@@ -295,14 +354,23 @@
   </div>
 </div>
 
+<div class="modal" id="modal-importar">
+  <div class="modal-box">
+    <h2>Importar backup</h2>
+    <p>Como você quer importar?</p>
+    <div class="modal-botoes">
+      <button class="cancelar" id="btn-imp-cancelar" type="button">Cancelar</button>
+      <button class="confirmar" id="btn-imp-mesclar" type="button">Mesclar</button>
+      <button class="confirmar" id="btn-imp-substituir" type="button" style="background:#c62828;">Substituir</button>
+    </div>
+  </div>
+</div>
+
 <div class="confete" id="confete"></div>
 <div class="toast" id="toast"></div>
 <div class="erro-box" id="erro-box"><strong>⚠️ Erro no app</strong><span id="erro-msg"></span></div>
 
 <script>
-/* ============================================================
-   Captura de erros — mostra na tela se algo quebrar
-   ============================================================ */
 window.addEventListener('error', function(e){
   var box = document.getElementById('erro-box');
   var msg = document.getElementById('erro-msg');
@@ -312,9 +380,6 @@ window.addEventListener('error', function(e){
   }
 });
 
-/* ============================================================
-   PERGUNTAS
-   ============================================================ */
 var PERGUNTAS = [
   { id:1, titulo:'Resolve problema <em>REAL</em>?', dica:'10 = resolve algo essencial. 0 = é só capricho.' },
   { id:2, titulo:'Vou lembrar em <em>1 MÊS</em>?', dica:'10 = vai fazer diferença duradoura. 0 = vou esquecer.' },
@@ -325,34 +390,39 @@ var PERGUNTAS = [
   { id:7, titulo:'Custo do <em>ARREPENDIMENTO</em>?', dica:'10 = não vai se arrepender. 0 = vai se arrepender muito.' }
 ];
 
-/* ============================================================
-   ESTADO
-   ============================================================ */
 var compraAtual = { nome:'', valor:0, notas:[], data:null };
 var indicePergunta = 0;
+var importandoBackup = null;
 
-/* ============================================================
-   STORAGE
-   ============================================================ */
 var STORAGE_KEY = 'eco_compras_v1';
+var PENDENTES_KEY = 'eco_pendentes_v1';
 
 function carregarHistorico(){
   try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
   catch(e){ return []; }
 }
-function salvarHistorico(lista){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(lista));
-}
+function salvarHistorico(lista){ localStorage.setItem(STORAGE_KEY, JSON.stringify(lista)); }
 function adicionarAoHistorico(item){
   var lista = carregarHistorico();
   lista.unshift(item);
   salvarHistorico(lista);
 }
 
-/* ============================================================
-   HELPERS — atenção: usamos "el" em vez de "$"
-   O "$" nativo do Firefox causa o erro "focus is read-only"
-   ============================================================ */
+function carregarPendentes(){
+  try{ return JSON.parse(localStorage.getItem(PENDENTES_KEY)) || []; }
+  catch(e){ return []; }
+}
+function salvarPendentes(lista){ localStorage.setItem(PENDENTES_KEY, JSON.stringify(lista)); }
+function adicionarPendente(item){
+  var lista = carregarPendentes();
+  lista.unshift(item);
+  salvarPendentes(lista);
+}
+function removerPendente(id){
+  var lista = carregarPendentes().filter(function(p){ return p.id !== id; });
+  salvarPendentes(lista);
+}
+
 function el(id){ return document.getElementById(id); }
 
 function irPara(id){
@@ -371,36 +441,25 @@ function toast(msg){
   toastTimer = setTimeout(function(){ t.classList.remove('ativo'); }, 2200);
 }
 
-/* ============================================================
-   MODAL NOVA DECISÃO
-   ============================================================ */
+/* ---------- MODAL NOVA DECISÃO ---------- */
 var modal = el('modal');
 var inputNome = el('input-nome');
 var inputValor = el('input-valor');
 
 el('btn-nova').addEventListener('click', function(){
+  compraAtual = { nome:'', valor:0, notas:[], data:null };
+  indicePergunta = 0;
   inputNome.value = '';
   inputValor.value = '';
   modal.classList.add('ativo');
   setTimeout(function(){ inputNome.focus(); }, 300);
 });
 
-el('btn-cancelar').addEventListener('click', function(){
-  modal.classList.remove('ativo');
-});
-
-modal.addEventListener('click', function(e){
-  if(e.target === modal) modal.classList.remove('ativo');
-});
-
+el('btn-cancelar').addEventListener('click', function(){ modal.classList.remove('ativo'); });
+modal.addEventListener('click', function(e){ if(e.target === modal) modal.classList.remove('ativo'); });
 el('btn-comecar').addEventListener('click', iniciarDecisao);
-
-inputNome.addEventListener('keydown', function(e){
-  if(e.key === 'Enter') inputValor.focus();
-});
-inputValor.addEventListener('keydown', function(e){
-  if(e.key === 'Enter') iniciarDecisao();
-});
+inputNome.addEventListener('keydown', function(e){ if(e.key==='Enter') inputValor.focus(); });
+inputValor.addEventListener('keydown', function(e){ if(e.key==='Enter') iniciarDecisao(); });
 
 function iniciarDecisao(){
   var nome = inputNome.value.trim();
@@ -419,9 +478,7 @@ function iniciarDecisao(){
   irPara('tela-pergunta');
 }
 
-/* ============================================================
-   PERGUNTAS
-   ============================================================ */
+/* ---------- FLUXO DE PERGUNTAS ---------- */
 var slider = el('slider');
 var notaGrande = el('nota-grande');
 
@@ -433,7 +490,7 @@ function renderizarPergunta(){
 
   var pct = (indicePergunta / PERGUNTAS.length) * 100;
   el('progresso-fill').style.width = pct + '%';
-  el('contador').textContent = (indicePergunta + 1) + '/' + PERGUNTAS.length;
+  el('contador').textContent = (indicePergunta+1) + '/' + PERGUNTAS.length;
 
   var valorAtual = (compraAtual.notas[indicePergunta] !== undefined) ? compraAtual.notas[indicePergunta] : 5;
   slider.value = valorAtual;
@@ -448,9 +505,7 @@ function atualizarNotaGrande(v){
   notaGrande.style.color = cor;
 }
 
-slider.addEventListener('input', function(e){
-  atualizarNotaGrande(parseInt(e.target.value));
-});
+slider.addEventListener('input', function(e){ atualizarNotaGrande(parseInt(e.target.value)); });
 
 el('btn-continuar').addEventListener('click', function(){
   compraAtual.notas[indicePergunta] = parseInt(slider.value);
@@ -472,9 +527,7 @@ el('btn-voltar-pergunta').addEventListener('click', function(){
   }
 });
 
-/* ============================================================
-   RESULTADO
-   ============================================================ */
+/* ---------- RESULTADO ---------- */
 function calcularResultado(soma){
   if(soma >= 56) return { classe:'ok', icone:'✅', veredito:'COMPRE!', msg:'Sua decisão passou no teste. Pode comprar com tranquilidade.' };
   if(soma >= 42) return { classe:'pense', icone:'⚠️', veredito:'PENSE 7 DIAS', msg:'Não é um <strong>não</strong>, mas também não é um <strong>sim</strong>. Espere uma semana e reavalie.' };
@@ -482,7 +535,7 @@ function calcularResultado(soma){
 }
 
 function mostrarResultado(){
-  var soma = compraAtual.notas.reduce(function(a,b){ return a + (b||0); }, 0);
+  var soma = compraAtual.notas.reduce(function(a,b){ return a+(b||0); }, 0);
   var r = calcularResultado(soma);
 
   var area = el('resultado-area');
@@ -525,25 +578,66 @@ el('btn-reiniciar').addEventListener('click', function(){
 });
 
 el('btn-concluir').addEventListener('click', function(){
-  var soma = compraAtual.notas.reduce(function(a,b){ return a + (b||0); }, 0);
+  var soma = compraAtual.notas.reduce(function(a,b){ return a+(b||0); }, 0);
   var r = calcularResultado(soma);
-  adicionarAoHistorico({
+  var item = {
+    id: 'd_' + Date.now(),
     nome: compraAtual.nome,
     valor: compraAtual.valor,
+    notas: compraAtual.notas.slice(),
     soma: soma,
     classe: r.classe,
     veredito: r.veredito,
     icone: r.icone,
     data: compraAtual.data || new Date().toISOString()
-  });
-  toast('Decisão salva!');
+  };
+
+  adicionarAoHistorico(item);
+
+  /* Se foi "pense", agenda reavaliação em 7 dias */
+  if(r.classe === 'pense'){
+    var daqui7 = new Date();
+    daqui7.setDate(daqui7.getDate() + 7);
+    adicionarPendente({
+      id: 'p_' + Date.now(),
+      nome: item.nome,
+      valor: item.valor,
+      notas: item.notas,
+      soma: item.soma,
+      dataOriginal: item.data,
+      dataReavaliar: daqui7.toISOString()
+    });
+    toast('Decisão salva · reavaliar em 7 dias');
+  } else {
+    toast('Decisão salva!');
+  }
+
   renderizarHome();
   irPara('tela-home');
 });
 
-/* ============================================================
-   HOME
-   ============================================================ */
+/* ---------- REAVALIAR ---------- */
+function reavaliarPendente(id){
+  var lista = carregarPendentes();
+  var p = null;
+  for(var i=0;i<lista.length;i++){ if(lista[i].id === id){ p = lista[i]; break; } }
+  if(!p){ toast('Pendente não encontrado'); return; }
+
+  compraAtual = {
+    nome: p.nome,
+    valor: p.valor,
+    notas: p.notas.slice(),
+    data: new Date().toISOString()
+  };
+  indicePergunta = 0;
+
+  removerPendente(id);
+  renderizarPergunta();
+  irPara('tela-pergunta');
+  toast('Reavaliando: ' + p.nome);
+}
+
+/* ---------- HOME ---------- */
 function formatarMoeda(v){
   return 'R$ ' + (v||0).toLocaleString('pt-BR',{minimumFractionDigits:0, maximumFractionDigits:0});
 }
@@ -552,6 +646,46 @@ function formatarData(iso){
     var d = new Date(iso);
     return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'short'});
   }catch(e){ return ''; }
+}
+function diasAte(iso){
+  var agora = new Date();
+  var alvo = new Date(iso);
+  var diff = Math.ceil((alvo - agora) / (1000*60*60*24));
+  return diff;
+}
+
+function renderizarPendentes(){
+  var lista = carregarPendentes();
+  var container = el('pendentes');
+
+  if(!lista.length){
+    container.classList.add('vazio');
+    return;
+  }
+  container.classList.remove('vazio');
+  el('pendentes-qtd').textContent = lista.length;
+
+  el('pendentes-lista').innerHTML = lista.map(function(p){
+    var dias = diasAte(p.dataReavaliar);
+    var vencido = dias <= 0;
+    var texto = vencido
+      ? 'Venceu há ' + Math.abs(dias) + (Math.abs(dias) === 1 ? ' dia' : ' dias')
+      : 'Faltam ' + dias + (dias === 1 ? ' dia' : ' dias');
+    return '<div class="pendente ' + (vencido ? 'vencido' : '') + '">' +
+      '<div class="info">' +
+        '<div class="nome">' + escapeHtml(p.nome) + '</div>' +
+        '<div class="dias">' + texto + ' · ' + formatarMoeda(p.valor) + '</div>' +
+      '</div>' +
+      '<button class="btn-reavaliar" data-id="' + p.id + '" type="button">Reavaliar</button>' +
+    '</div>';
+  }).join('');
+
+  var botoes = document.querySelectorAll('.btn-reavaliar');
+  for(var i=0;i<botoes.length;i++){
+    botoes[i].addEventListener('click', function(){
+      reavaliarPendente(this.getAttribute('data-id'));
+    });
+  }
 }
 
 function renderizarHome(){
@@ -566,6 +700,8 @@ function renderizarHome(){
 
   var btnLimpar = el('btn-limpar');
   btnLimpar.style.display = lista.length ? 'inline' : 'none';
+
+  renderizarPendentes();
 
   var cont = el('historico');
   if(!lista.length){
@@ -593,18 +729,115 @@ function escapeHtml(s){
 }
 
 el('btn-limpar').addEventListener('click', function(){
-  if(confirm('Apagar todo o histórico? Isso não pode ser desfeito.')){
+  if(confirm('Apagar todo o histórico e pendentes? Isso não pode ser desfeito.')){
     salvarHistorico([]);
+    salvarPendentes([]);
     renderizarHome();
-    toast('Histórico apagado');
+    toast('Tudo apagado');
   }
 });
 
-/* ============================================================
-   INSTALAR COMO APP (PWA)
-   ============================================================ */
-var deferredPrompt = null;
+/* ---------- BACKUP ---------- */
+el('btn-exportar').addEventListener('click', function(){
+  var dados = {
+    versao: 1,
+    exportadoEm: new Date().toISOString(),
+    historico: carregarHistorico(),
+    pendentes: carregarPendentes()
+  };
 
+  var json = JSON.stringify(dados, null, 2);
+  var blob = new Blob([json], {type: 'application/json'});
+  var url = URL.createObjectURL(blob);
+
+  var a = document.createElement('a');
+  var hoje = new Date();
+  var nomeArquivo = 'eco-backup-' +
+    hoje.getFullYear() + '-' +
+    String(hoje.getMonth()+1).padStart(2,'0') + '-' +
+    String(hoje.getDate()).padStart(2,'0') + '.json';
+
+  a.href = url;
+  a.download = nomeArquivo;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+
+  toast('Backup baixado!');
+});
+
+el('btn-importar').addEventListener('click', function(){
+  el('input-importar').click();
+});
+
+el('input-importar').addEventListener('change', function(e){
+  var arquivo = e.target.files[0];
+  if(!arquivo) return;
+
+  var reader = new FileReader();
+  reader.onload = function(evt){
+    try{
+      var dados = JSON.parse(evt.target.result);
+      if(!dados.historico || !Array.isArray(dados.historico)){
+        toast('Arquivo inválido');
+        return;
+      }
+      importandoBackup = dados;
+      el('modal-importar').classList.add('ativo');
+    }catch(err){
+      toast('Erro ao ler o arquivo');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(arquivo);
+});
+
+el('btn-imp-cancelar').addEventListener('click', function(){
+  el('modal-importar').classList.remove('ativo');
+  importandoBackup = null;
+});
+
+el('btn-imp-mesclar').addEventListener('click', function(){
+  if(!importandoBackup) return;
+  var atual = carregarHistorico();
+  var novos = importandoBackup.historico || [];
+  var idsAtuais = {};
+  for(var i=0;i<atual.length;i++) idsAtuais[atual[i].id] = true;
+  for(var j=0;j<novos.length;j++){
+    if(!idsAtuais[novos[j].id]) atual.push(novos[j]);
+  }
+  atual.sort(function(a,b){ return new Date(b.data) - new Date(a.data); });
+  salvarHistorico(atual);
+
+  var pendAtuais = carregarPendentes();
+  var pendNovos = importandoBackup.pendentes || [];
+  var idsPend = {};
+  for(var k=0;k<pendAtuais.length;k++) idsPend[pendAtuais[k].id] = true;
+  for(var l=0;l<pendNovos.length;l++){
+    if(!idsPend[pendNovos[l].id]) pendAtuais.push(pendNovos[l]);
+  }
+  salvarPendentes(pendAtuais);
+
+  el('modal-importar').classList.remove('ativo');
+  importandoBackup = null;
+  renderizarHome();
+  toast('Backup mesclado!');
+});
+
+el('btn-imp-substituir').addEventListener('click', function(){
+  if(!importandoBackup) return;
+  if(!confirm('Isso vai apagar o histórico atual e substituir pelo do backup. Continuar?')) return;
+  salvarHistorico(importandoBackup.historico || []);
+  salvarPendentes(importandoBackup.pendentes || []);
+  el('modal-importar').classList.remove('ativo');
+  importandoBackup = null;
+  renderizarHome();
+  toast('Backup restaurado!');
+});
+
+/* ---------- INSTALAR PWA ---------- */
+var deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e){
   e.preventDefault();
   deferredPrompt = e;
@@ -629,9 +862,7 @@ window.addEventListener('appinstalled', function(){
   toast('ECO instalado com sucesso!');
 });
 
-/* ============================================================
-   SERVICE WORKER — modo offline
-   ============================================================ */
+/* ---------- SERVICE WORKER ---------- */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function(){
     navigator.serviceWorker.register('sw.js')
@@ -640,11 +871,8 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-/* ============================================================
-   INICIALIZAÇÃO
-   ============================================================ */
 renderizarHome();
-console.log('✅ ECO carregado com sucesso.');
+console.log('✅ ECO v2 carregado com sucesso.');
 </script>
 </body>
 </html>
